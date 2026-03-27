@@ -4,13 +4,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
@@ -23,6 +18,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.kaeru.shutthebox.databinding.ActivityLoginBinding;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -34,23 +30,21 @@ public class LoginActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private FirebaseFirestore db;
     private GoogleSignInClient mGoogleSignInClient;
-    private com.google.android.gms.common.SignInButton btnGoogleSignIn;
-
-    private EditText rFullname , rUsername, rEmail, rPassword, rPasswordConfirm , sUsername , sPassword;
-    private Button rRegisterButton, sSignInButton ;
-    private LinearLayout registerLayout, signInLayout , GLayout;
-    private TextView rToS, sToR;
-
-    private EditText gUsernameEditText;
-    private Button gUsernameSaveButton;
+    private ActivityLoginBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
+        binding = ActivityLoginBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
+
+        // Check if user is already logged in
+        if (mAuth.getCurrentUser() != null) {
+            navigateToMain();
+        }
 
         // Google Sign-In Ayarları
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -59,109 +53,78 @@ public class LoginActivity extends AppCompatActivity {
                 .build();
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
-        initViews();
         setupListeners();
     }
 
-    private void initViews() {
-        rFullname = findViewById(R.id.r_FullName);
-        rUsername = findViewById(R.id.r_Username);
-        rEmail = findViewById(R.id.r_Email);
-        rPassword = findViewById(R.id.r_Password);
-        rPasswordConfirm = findViewById(R.id.r_PasswordConfirm);
-        rRegisterButton = findViewById(R.id.r_RegisterButton);
-        sSignInButton = findViewById(R.id.s_SignInButton);
-        btnGoogleSignIn = findViewById(R.id.btn_google_sign_in);
-
-        sUsername = findViewById(R.id.s_Username);
-        sPassword = findViewById(R.id.s_Password);
-        registerLayout = findViewById(R.id.RegisterLayout);
-        signInLayout = findViewById(R.id.SignInLayout);
-        GLayout = findViewById(R.id.GLayout);
-        gUsernameEditText = findViewById(R.id.g_Username);
-        gUsernameSaveButton = findViewById(R.id.g_UsernameSaveButton);
-        rToS = findViewById(R.id.r_to_s);
-        sToR = findViewById(R.id.s_to_r);
-    }
-
     private void setupListeners() {
-        // Kayıt Olma
-        rRegisterButton.setOnClickListener(view -> {
-            String fullname = rFullname.getText().toString().trim();
-            String username = rUsername.getText().toString().trim();
-            String email = rEmail.getText().toString().trim();
-            String password = rPassword.getText().toString().trim();
-            String passwordConfirm = rPasswordConfirm.getText().toString().trim();
+        binding.rRegisterButton.setOnClickListener(view -> {
+            String fullname = binding.rFullName.getText().toString().trim();
+            String username = binding.rUsername.getText().toString().trim();
+            String email = binding.rEmail.getText().toString().trim();
+            String password = binding.rPassword.getText().toString().trim();
+            String passwordConfirm = binding.rPasswordConfirm.getText().toString().trim();
 
-            if (!password.equals(passwordConfirm)) {
-                Toast.makeText(this, "Passwords do not match", Toast.LENGTH_SHORT).show();
+            if (fullname.isEmpty() || username.isEmpty() || email.isEmpty() || password.isEmpty()) {
+                showToast("Please fill all fields");
                 return;
             }
 
-            registerWithEmail(fullname , username, email, password);
+            if (!password.equals(passwordConfirm)) {
+                showToast("Passwords do not match");
+                return;
+            }
+
+            registerWithEmail(fullname, username, email, password);
         });
 
-        sSignInButton.setOnClickListener(view -> {
-            String username = sUsername.getText().toString().trim();
-            String password = sPassword.getText().toString().trim();
+        binding.sSignInButton.setOnClickListener(view -> {
+            String email = binding.sUsername.getText().toString().trim(); // Note: Firebase Auth uses email
+            String password = binding.sPassword.getText().toString().trim();
 
-            if (username.isEmpty() || password.isEmpty()) {
-                Toast.makeText(LoginActivity.this, "Please enter both email and password", Toast.LENGTH_SHORT).show();
+            if (email.isEmpty() || password.isEmpty()) {
+                showToast("Please enter both email and password");
             } else {
-                signInWithUsername(username, password);
+                signInWithEmail(email, password);
             }
         });
 
-        gUsernameSaveButton.setOnClickListener(view -> {
-            String googleUsername = gUsernameEditText.getText().toString().trim();
+        binding.gUsernameSaveButton.setOnClickListener(view -> {
+            String googleUsername = binding.gUsername.getText().toString().trim();
             if (!googleUsername.isEmpty()) {
                 FirebaseUser user = mAuth.getCurrentUser();
                 if (user != null) {
                     saveUserToFirestore(user.getUid(), googleUsername, user.getEmail(), user.getDisplayName());
                 }
             } else {
-                Toast.makeText(LoginActivity.this, "Please enter a username", Toast.LENGTH_SHORT).show();
+                showToast("Please enter a username");
             }
         });
 
+        binding.btnGoogleSignIn.setOnClickListener(view -> signInWithGoogle());
 
-        // Google ile Giriş
-        btnGoogleSignIn.setOnClickListener(view -> signInWithGoogle());
-
-        // Giriş/Kayıt Arası Geçiş
-        rToS.setOnClickListener(view -> switchLayout(false));
-        sToR.setOnClickListener(view -> switchLayout(true));
+        binding.rToS.setOnClickListener(view -> switchLayout(false));
+        binding.sToR.setOnClickListener(view -> switchLayout(true));
     }
 
-    private void signInWithUsername(String email, String password) {
+    private void signInWithEmail(String email, String password) {
         mAuth.signInWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
-                FirebaseUser user = mAuth.getCurrentUser();
-                if (user != null) {
-                    
-                    Toast.makeText(LoginActivity.this, "Sign-In Successful", Toast.LENGTH_SHORT).show();
-                    Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                    startActivity(intent);
-                    finish();
-                }
+                navigateToMain();
             } else {
-                Toast.makeText(LoginActivity.this, "Sign-In Failed: " + task.getException(), Toast.LENGTH_SHORT).show();
+                showToast("Sign-In Failed: " + (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
             }
         });
     }
 
-    private void registerWithEmail(String fullname ,String username, String email, String password) {
+    private void registerWithEmail(String fullname, String username, String email, String password) {
         mAuth.createUserWithEmailAndPassword(email, password).addOnCompleteListener(task -> {
             if (task.isSuccessful()) {
                 FirebaseUser user = mAuth.getCurrentUser();
                 if (user != null) {
                     saveUserToFirestore(user.getUid(), username, email, fullname);
                 }
-                Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                startActivity(intent);
-                finish();
             } else {
-                Toast.makeText(this, "Registration Failed: " + task.getException(), Toast.LENGTH_SHORT).show();
+                showToast("Registration Failed: " + (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
             }
         });
     }
@@ -192,32 +155,25 @@ public class LoginActivity extends AppCompatActivity {
             if (task.isSuccessful()) {
                 FirebaseUser user = mAuth.getCurrentUser();
                 if (user != null) {
-                   
-                    FirebaseFirestore db = FirebaseFirestore.getInstance();
                     db.collection("users").document(user.getUid()).get()
                             .addOnCompleteListener(documentTask -> {
-                                if (documentTask.isSuccessful()) {
+                                if (documentTask.isSuccessful() && documentTask.getResult() != null) {
                                     if (documentTask.getResult().exists()) {
-                                       
-                                        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                                        startActivity(intent);
-                                        finish();
+                                        navigateToMain();
                                     } else {
-                                      
-                                        GLayout.setVisibility(View.VISIBLE);
-                                        btnGoogleSignIn.setVisibility(View.GONE);
-                                        registerLayout.setVisibility(View.GONE);
-                                        signInLayout.setVisibility(View.GONE);
+                                        binding.GLayout.setVisibility(View.VISIBLE);
+                                        binding.btnGoogleSignIn.setVisibility(View.GONE);
+                                        binding.RegisterLayout.setVisibility(View.GONE);
+                                        binding.SignInLayout.setVisibility(View.GONE);
                                     }
                                 }
                             });
                 }
             } else {
-                Toast.makeText(this, "Google Sign-In Failed: " + task.getException(), Toast.LENGTH_SHORT).show();
+                showToast("Google Sign-In Failed: " + (task.getException() != null ? task.getException().getMessage() : "Unknown error"));
             }
         });
     }
-
 
     private void saveUserToFirestore(String userId, String username, String email, String displayName) {
         Map<String, Object> user = new HashMap<>();
@@ -227,24 +183,22 @@ public class LoginActivity extends AppCompatActivity {
         user.put("registrationDate", System.currentTimeMillis());
 
         db.collection("users").document(userId).set(user)
-                .addOnSuccessListener(aVoid -> {
-                  
-                    Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-                    startActivity(intent);
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Error Saving User: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+                .addOnSuccessListener(aVoid -> navigateToMain())
+                .addOnFailureListener(e -> showToast("Error Saving User: " + e.getMessage()));
     }
-
-
-
 
     private void switchLayout(boolean toRegister) {
-        registerLayout.setVisibility(toRegister ? View.VISIBLE : View.GONE);
-        signInLayout.setVisibility(toRegister ? View.GONE : View.VISIBLE);
-        GLayout.setVisibility(View.GONE);  // Hide Google username input by default
+        binding.RegisterLayout.setVisibility(toRegister ? View.VISIBLE : View.GONE);
+        binding.SignInLayout.setVisibility(toRegister ? View.GONE : View.VISIBLE);
+        binding.GLayout.setVisibility(View.GONE);
     }
 
+    private void navigateToMain() {
+        startActivity(new Intent(LoginActivity.this, MainActivity.class));
+        finish();
+    }
+
+    private void showToast(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+    }
 }

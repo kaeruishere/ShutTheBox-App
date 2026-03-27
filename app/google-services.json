@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "886253492605",
+    "project_id": "shuttheboxapp-8bdae",
+    "storage_bucket": "shuttheboxapp-8bdae.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:886253492605:android:ab7659f7187ef8a9f39414",
+        "android_client_info": {
+          "package_name": "com.kaeru.shutthebox"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "886253492605-q5kfc8373ik3t9d26boomq79npp98mn3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kaeru.shutthebox",
+            "certificate_hash": "1555e8fb0ce7fda6492be8742e389eead2089197"
+          }
+        },
+        {
+          "client_id": "886253492605-0mdgfchrfs7gqc3baijd0fc0cq7m8re3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA3sQquxWoqyNq7jyi-9DGtaZ14i7E-QUM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "886253492605-0mdgfchrfs7gqc3baijd0fc0cq7m8re3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
